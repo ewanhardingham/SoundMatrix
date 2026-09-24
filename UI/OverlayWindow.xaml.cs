@@ -34,6 +34,19 @@ public partial class OverlayWindow : Window
     internal SettingsPanel? CurrentSettingsPanel => _settingsPanel;
     internal string StatusMessage => StatusText.Text;
 
+    /// <summary>
+    /// Lays the matrix out as if the screen were this wide (the Viewbox then scales it to fit), so the
+    /// tests see the same arrangement of panels on any screen, including CI's small one.
+    /// </summary>
+    internal double? FixedMatrixWidth
+    {
+        get => _fixedMatrixWidth;
+        set { _fixedMatrixWidth = value; UpdateMatrixWidth(); }
+    }
+    double? _fixedMatrixWidth;
+
+    void UpdateMatrixWidth() => DeviceList.MaxWidth = _fixedMatrixWidth ?? Math.Max(560, ActualWidth - 96);
+
     internal void ResetForTests()
     {
         CloseSettings();
@@ -62,7 +75,7 @@ public partial class OverlayWindow : Window
         PreviewKeyDown += OnPreviewKeyDown;
         Activated += (_, _) => Trace.Log("Overlay activated");
         Deactivated += (_, _) => { Trace.Log("Overlay deactivated"); if (HideOnDeactivate) HideOverlay(); };
-        SizeChanged += (_, _) => DeviceList.MaxWidth = Math.Max(560, ActualWidth - 96);
+        SizeChanged += (_, _) => UpdateMatrixWidth();
     }
 
     // ---- show / hide -------------------------------------------------------

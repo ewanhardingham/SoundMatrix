@@ -64,12 +64,8 @@ public sealed class AppDriver : IDisposable
         {
             Audio = new FakeAudioService(blink: false);
             _app.ResetForTests(Audio);
-            // A fixed layout (3 device panels per row) regardless of the machine's screen size.
-            var overlay = _app.Overlay;
-            overlay.Left = 0;
-            overlay.Top = 0;
-            overlay.Width = 1920;
-            overlay.Height = 1080;
+            // Three device panels per row whatever the screen size (CI runners are 1024x768).
+            _app.Overlay.FixedMatrixWidth = 1824;
         });
         Settle();
     }
