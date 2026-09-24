@@ -27,10 +27,17 @@ internal sealed class GlobalHotkeys : IDisposable
 
         var id = _nextId++;
         if (!Native.RegisterHotKey(_source.Handle, id, mods, (uint)KeyInterop.VirtualKeyFromKey(hotkey.Key)))
+        {
+            Trace.Log($"RegisterHotKey {hotkey.Display} failed: Win32 error {System.Runtime.InteropServices.Marshal.GetLastWin32Error()}");
             return false;
+        }
         _handlers[id] = handler;
         return true;
     }
+
+    // Test hooks: lets the end-to-end tests deliver a real WM_HOTKEY to this window.
+    internal IntPtr Handle => _source.Handle;
+    internal IReadOnlyCollection<int> RegisteredIds => _handlers.Keys;
 
     public void UnregisterAll()
     {

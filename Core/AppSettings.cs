@@ -95,7 +95,9 @@ public sealed class AppSettings
         items.OrderBy(x => DeviceOrder.IndexOf(id(x)) is var i and >= 0 ? i : int.MaxValue).ToList();
 
     static readonly string Dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SoundMatrix");
-    static string FilePath => Path.Combine(Dir, "settings.json");
+    /// <summary>Settings file name without extension; test mode uses its own so fake devices don't leak in.</summary>
+    public static string Profile { get; set; } = "settings";
+    static string FilePath => Path.Combine(Dir, Profile + ".json");
     public static string LogPath => Path.Combine(Dir, "error.log");
 
     static readonly JsonSerializerOptions Json = new()

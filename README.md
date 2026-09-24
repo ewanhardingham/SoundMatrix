@@ -40,20 +40,34 @@ cd SoundMatrix
 dotnet run                  # runs in the tray; Ctrl+Alt+S opens the overlay
 dotnet run -- --show        # open the overlay immediately
 dotnet run -- --diagnose    # write %APPDATA%\SoundMatrix\diagnose.txt: where each app is placed, and why
+dotnet run -- --fake-audio  # test mode: stubbed devices and apps (Debug builds only)
 ```
+
+**Test mode** (`--fake-audio`, or the *Test mode (fake audio)* launch profile) swaps the real audio system for five fake devices and fourteen fake apps with live-looking meters. They cover the awkward cases: a crowded device, an empty one, long names, muted and silent apps, and an app that appears and disappears every 8 seconds. Moving, muting and volume changes only affect the fake data, and test mode keeps its own `settings.test.json`, so it's safe to run alongside the installed app. It isn't compiled into Release builds. To add a scenario, edit the lists in `Audio/FakeAudioService.cs`.
 
 | Path | What's there |
 | --- | --- |
-| `Audio/` | WASAPI sessions (via NAudio), plus per-app routing through the undocumented `AudioPolicyConfig` API |
+| `Audio/` | `IAudioService`, with the real WASAPI implementation (sessions via NAudio, per-app routing through the undocumented `AudioPolicyConfig` API) and the fake one for test mode |
 | `UI/` | Overlay window, in-overlay settings panel, glass styles |
 | `Core/`, `Interop/` | Settings (JSON in `%APPDATA%\SoundMatrix`), hotkeys, Win32 calls |
 | `installer/` | Inno Setup script |
+| `tests/` | End-to-end tests (xUnit) |
+
+### Tests
+
+```powershell
+dotnet test tests/SoundMatrix.Tests
+```
+
+The end-to-end tests start the real app in test mode and drive the overlay with its hotkeys: navigation, jumping to a device, picking up and moving an app, mute, volume, opening settings, rebinding a key, and the global hotkey. After each step they check both what's on screen and the resulting audio state. Key presses go through the same WPF handlers a physical keypress reaches, so they don't need focus and can't be disturbed by other windows. Add a test to `tests/SoundMatrix.Tests/OverlayHotkeyTests.cs` when you change a hotkey or add behaviour. If your installed copy is running and holds `Ctrl+Alt+S`, the global-hotkey test will fail locally, so quit it before running the tests.
+
+### Pull requests
 
 1. Fork the repo and create a branch.
-2. Make your change and check it with `dotnet run`.
-3. Open a pull request against `main`. CI builds the app and the installer.
+2. Make your change, check it with `dotnet run`, and run the tests.
+3. Open a pull request against `main`. CI builds the app, runs the end-to-end tests and builds the installer, and it must pass before merging.
 
-Every merge to `main` publishes a new release with an installer automatically, so keep `main` releasable. Changes that only touch docs don't trigger a release.
+Every merge to `main` runs the tests again and, if they pass, publishes a new release with an installer, so keep `main` releasable. Changes that only touch docs don't trigger a release.
 
 ## License
 

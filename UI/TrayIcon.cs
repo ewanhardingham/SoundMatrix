@@ -9,7 +9,7 @@ internal sealed class TrayIcon : IDisposable
     readonly Forms.NotifyIcon _icon;
     readonly Forms.ToolStripMenuItem _openItem;
 
-    public TrayIcon(Action open, Action settings, Action exit)
+    public TrayIcon(Action open, Action settings, Action exit, bool testMode)
     {
         _openItem = new Forms.ToolStripMenuItem("Open matrix", null, (_, _) => open());
         var menu = new Forms.ContextMenuStrip();
@@ -19,7 +19,8 @@ internal sealed class TrayIcon : IDisposable
         menu.Items.Add(new Forms.ToolStripMenuItem("Exit", null, (_, _) => exit()));
 
         var version = typeof(TrayIcon).Assembly.GetName().Version;
-        var text = version is null ? "SoundMatrix" : $"SoundMatrix {version.ToString(3)}";
+        var text = testMode ? "SoundMatrix (test mode)"
+            : version is null ? "SoundMatrix" : $"SoundMatrix {version.ToString(3)}";
         _icon = new Forms.NotifyIcon { Icon = CreateIcon(), Text = text, ContextMenuStrip = menu, Visible = true };
         _icon.MouseClick += (_, e) => { if (e.Button == Forms.MouseButtons.Left) open(); };
     }

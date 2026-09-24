@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "SoundMatrix": {
+      "commandName": "Project"
+    },
+    "Test mode (fake audio)": {
+      "commandName": "Project",
+      "commandLineArgs": "--fake-audio"
+    }
+  }
+}

@@ -24,11 +24,48 @@ public partial class OverlayWindow : Window
 
     AppSettings Settings => _app.Settings;
 
+    // ---- test hooks (used by the end-to-end tests) --------------------------
+
+    /// <summary>Clicking elsewhere closes the overlay; the tests turn this off so focus changes on CI can't interfere.</summary>
+    internal bool HideOnDeactivate { get; set; } = true;
+    internal AppVM? FocusedApp => _focused;
+    internal AppVM? HeldApp => _held;
+    internal bool IsSettingsOpen => SettingsOpen;
+    internal SettingsPanel? CurrentSettingsPanel => _settingsPanel;
+    internal string StatusMessage => StatusText.Text;
+
+    /// <summary>
+    /// Lays the matrix out as if the screen were this wide (the Viewbox then scales it to fit), so the
+    /// tests see the same arrangement of panels on any screen, including CI's small one.
+    /// </summary>
+    internal double? FixedMatrixWidth
+    {
+        get => _fixedMatrixWidth;
+        set { _fixedMatrixWidth = value; UpdateMatrixWidth(); }
+    }
+    double? _fixedMatrixWidth;
+
+    void UpdateMatrixWidth() => DeviceList.MaxWidth = _fixedMatrixWidth ?? Math.Max(560, ActualWidth - 96);
+
+    internal void ResetForTests()
+    {
+        CloseSettings();
+        CancelHold();
+        SetFocus(null);
+        foreach (var d in Devices) d.Apps.Clear();
+        Devices.Clear();
+        _deviceVMs.Clear();
+        _appVMs.Clear();
+        if (IsVisible) { RefreshAudio(); SetStatus(null); }
+        else ShowOverlay();
+    }
+
     public OverlayWindow(App app)
     {
         _app = app;
         InitializeComponent();
         DataContext = this;
+        TestBadge.Visibility = app.IsTestMode ? Visibility.Visible : Visibility.Collapsed;
 
         _refreshTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => RefreshAudio(), Dispatcher);
         _meterTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(40), DispatcherPriority.Render, (_, _) => UpdateMeters(), Dispatcher);
@@ -37,8 +74,8 @@ public partial class OverlayWindow : Window
 
         PreviewKeyDown += OnPreviewKeyDown;
         Activated += (_, _) => Trace.Log("Overlay activated");
-        Deactivated += (_, _) => { Trace.Log("Overlay deactivated"); HideOverlay(); };
-        SizeChanged += (_, _) => DeviceList.MaxWidth = Math.Max(560, ActualWidth - 96);
+        Deactivated += (_, _) => { Trace.Log("Overlay deactivated"); if (HideOnDeactivate) HideOverlay(); };
+        SizeChanged += (_, _) => UpdateMatrixWidth();
     }
 
     // ---- show / hide -------------------------------------------------------
@@ -209,7 +246,7 @@ public partial class OverlayWindow : Window
         if (SettingsOpen) return; // the settings panel handles its own keys (Tab, Space, capture, Esc)
 
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        var mods = Keyboard.Modifiers;
+        var mods = e.KeyboardDevice.Modifiers; // same as Keyboard.Modifiers for real input; lets tests simulate Ctrl etc.
         bool Is(HotkeyAction action) => Settings.Get(action).Matches(key, mods);
 
         e.Handled = true;

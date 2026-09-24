@@ -5,8 +5,6 @@ namespace SoundMatrix;
 
 public partial class App : Application
 {
-    const string ShowEventName = "SoundMatrix.ShowOverlay";
-
     Mutex? _mutex;
     EventWaitHandle? _showEvent;
     GlobalHotkeys _hotkeys = null!;
@@ -14,18 +12,41 @@ public partial class App : Application
     OverlayWindow _overlay = null!;
 
     public AppSettings Settings { get; private set; } = new();
-    public AudioService Audio { get; private set; } = null!;
+    public IAudioService Audio { get; private set; } = null!;
+
+    /// <summary>Development test mode: stubbed audio, separate settings, can run beside the real app.</summary>
+    public bool IsTestMode { get; private set; }
+
+    internal OverlayWindow Overlay => _overlay;
+    internal GlobalHotkeys Hotkeys => _hotkeys;
+
+    /// <summary>
+    /// Set by the end-to-end tests before the app starts: their fake audio and a profile name, giving them
+    /// isolated settings and a single-instance lock that won't clash with a running copy.
+    /// </summary>
+    internal static (IAudioService Audio, string Profile)? TestStartup { get; set; }
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (TestStartup is { } test) Start(e.Args, test.Audio, test.Profile);
+        else Start(e.Args);
+    }
 
-        _mutex = new Mutex(true, "SoundMatrix.SingleInstance", out var isFirst);
+    void Start(string[] args, IAudioService? audio = null, string testProfile = "test")
+    {
+#if DEBUG
+        IsTestMode = audio is not null || args.Contains("--fake-audio");
+#endif
+        var instance = IsTestMode ? $"SoundMatrix.{testProfile}" : "SoundMatrix";
+        var showEventName = instance + ".ShowOverlay";
+
+        _mutex = new Mutex(true, instance + ".SingleInstance", out var isFirst);
         if (!isFirst)
         {
             // Already running (e.g. launched again from the Start menu): ask that copy to open the overlay.
             Native.AllowSetForegroundWindow(Native.ASFW_ANY);
-            try { using var show = EventWaitHandle.OpenExisting(ShowEventName); show.Set(); } catch { }
+            try { using var show = EventWaitHandle.OpenExisting(showEventName); show.Set(); } catch { }
             Shutdown();
             return;
         }
@@ -37,10 +58,15 @@ public partial class App : Application
             _tray?.Notify("SoundMatrix hit an error", ex.Exception.Message);
         };
 
+        if (IsTestMode) AppSettings.Profile = $"settings.{testProfile}"; // keep fake devices out of the real settings
         Settings = AppSettings.Load();
-        Audio = new AudioService();
+#if DEBUG
+        Audio = audio ?? (IsTestMode ? new FakeAudioService() : new WasapiAudioService());
+#else
+        Audio = new WasapiAudioService();
+#endif
 
-        if (e.Args.Contains("--diagnose"))
+        if (args.Contains("--diagnose"))
         {
             var path = Path.Combine(Path.GetDirectoryName(AppSettings.LogPath)!, "diagnose.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -49,20 +75,31 @@ public partial class App : Application
             return;
         }
         _hotkeys = new GlobalHotkeys();
-        _tray = new TrayIcon(ToggleOverlay, OpenSettings, ExitApp);
+        _tray = new TrayIcon(ToggleOverlay, OpenSettings, ExitApp, IsTestMode);
         _overlay = new OverlayWindow(this);
 
-        _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
+        _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, showEventName);
         ThreadPool.RegisterWaitForSingleObject(_showEvent,
             (_, _) => Dispatcher.BeginInvoke(() => { if (!_overlay.IsVisible) _overlay.ShowOverlay(); }),
             null, Timeout.Infinite, executeOnlyOnce: false);
 
         var hotkey = Settings.Get(HotkeyAction.ToggleOverlay);
-        if (RegisterHotkeys())
+        var registered = RegisterHotkeys();
+        if (IsTestMode)
+            _tray.Notify("SoundMatrix test mode", "Fake devices and apps. Nothing here touches your real audio.");
+        else if (registered)
             _tray.Notify("SoundMatrix is running", $"Press {hotkey.Display} to open the matrix.");
 
-        if (e.Args.Contains("--show")) _overlay.ShowOverlay();
-        if (e.Args.Contains("--settings")) OpenSettings();
+        if (args.Contains("--show") || IsTestMode) _overlay.ShowOverlay();
+        if (args.Contains("--settings")) OpenSettings();
+    }
+
+    /// <summary>Test hook: fresh audio + default settings, overlay back to a clean matrix view.</summary>
+    internal void ResetForTests(IAudioService audio)
+    {
+        Audio = audio;
+        ApplySettings(new AppSettings());
+        _overlay.ResetForTests();
     }
 
     bool RegisterHotkeys()
@@ -72,7 +109,8 @@ public partial class App : Application
         _tray.SetOpenHotkey(hotkey);
         if (hotkey.IsEmpty) return false;
         if (_hotkeys.Register(hotkey, ToggleOverlay)) return true;
-        _tray.Notify("Hotkey unavailable", $"{hotkey.Display} is already used by another app. Pick another in Settings.");
+        // In test mode the installed copy usually owns the hotkey; the tray icon still opens the overlay.
+        if (!IsTestMode) _tray.Notify("Hotkey unavailable", $"{hotkey.Display} is already used by another app. Pick another in Settings.");
         return false;
     }
 
@@ -101,7 +139,7 @@ public partial class App : Application
         _overlay.OpenSettings();
     }
 
-    void ExitApp()
+    internal void ExitApp()
     {
         _tray.Dispose();
         _hotkeys.Dispose();

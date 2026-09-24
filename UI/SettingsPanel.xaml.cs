@@ -128,7 +128,7 @@ public partial class SettingsPanel : UserControl
     void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        var mods = Keyboard.Modifiers;
+        var mods = e.KeyboardDevice.Modifiers; // same as Keyboard.Modifiers for real input; lets tests simulate Ctrl etc.
 
         if (_capturing is not null)
         {
@@ -154,9 +154,15 @@ public partial class SettingsPanel : UserControl
         }
     }
 
-    void Capture_Click(object sender, RoutedEventArgs e)
+    void Capture_Click(object sender, RoutedEventArgs e) => ToggleCapture((HotkeyRow)((FrameworkElement)sender).Tag);
+
+    /// <summary>Test hook: same as clicking that hotkey's key button.</summary>
+    internal void BeginCapture(HotkeyAction action) => ToggleCapture(_hotkeys.First(r => r.Action == action));
+
+    internal HotkeyRow HotkeyRowFor(HotkeyAction action) => _hotkeys.First(r => r.Action == action);
+
+    void ToggleCapture(HotkeyRow row)
     {
-        var row = (HotkeyRow)((FrameworkElement)sender).Tag;
         var wasCapturing = _capturing == row;
         StopCapture();
         if (wasCapturing) return;
