@@ -1,0 +1,173 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Controls restyled to sit on the overlay's glass: translucent fills, white keyboard focus ring. -->
+
+    <Style x:Key="GlassFocus">
+        <Setter Property="Control.Template">
+            <Setter.Value>
+                <ControlTemplate>
+                    <Border CornerRadius="11" BorderBrush="White" BorderThickness="2" Margin="-4" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="GlassCard" TargetType="Border">
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="Background" Value="#12FFFFFF" />
+        <Setter Property="BorderBrush" Value="#26FFFFFF" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="20,16,20,18" />
+        <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+
+    <Style x:Key="H2" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <Style x:Key="Note" TargetType="TextBlock">
+        <Setter Property="Opacity" Value="0.65" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+
+    <Style TargetType="Button">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Background" Value="#1FFFFFFF" />
+        <Setter Property="BorderBrush" Value="#40FFFFFF" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="16,7" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GlassFocus}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" CornerRadius="9" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.6" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Bd" Property="Opacity" Value="0.35" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Background" Value="White" />
+        <Setter Property="BorderBrush" Value="White" />
+        <Setter Property="Foreground" Value="#0E1015" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Padding" Value="9,8" />
+        <Setter Property="Margin" Value="6,0,0,0" />
+    </Style>
+
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GlassFocus}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <DockPanel Background="Transparent">
+                        <Border x:Name="Box" DockPanel.Dock="Left" Width="20" Height="20" CornerRadius="6"
+                                BorderBrush="#99FFFFFF" BorderThickness="1.5" Background="#14FFFFFF" VerticalAlignment="Center">
+                            <TextBlock x:Name="Tick" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" FontSize="12"
+                                       Foreground="#0E1015" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                        </Border>
+                        <ContentPresenter Margin="10,0,0,0" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="White" />
+                            <Setter TargetName="Box" Property="BorderBrush" Value="White" />
+                            <Setter TargetName="Tick" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="SliderPart" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="IsTabStop" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Height="4" CornerRadius="2" Background="{TemplateBinding Background}" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="Slider">
+        <Setter Property="FocusVisualStyle" Value="{StaticResource GlassFocus}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid Height="24" Background="Transparent">
+                        <Border Height="4" CornerRadius="2" Background="#33FFFFFF" VerticalAlignment="Center" />
+                        <Track x:Name="PART_Track">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource SliderPart}" Background="White" Command="Slider.DecreaseLarge" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource SliderPart}" Background="Transparent" Command="Slider.IncreaseLarge" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Width="18" Height="18" Cursor="Hand">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Ellipse Fill="White" Stroke="#40000000" StrokeThickness="1" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ScrollBar">
+        <Setter Property="Width" Value="8" />
+        <Setter Property="MinWidth" Value="8" />
+        <Setter Property="Margin" Value="8,0,0,0" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Track x:Name="PART_Track" IsDirectionReversed="True">
+                        <Track.Thumb>
+                            <Thumb>
+                                <Thumb.Template>
+                                    <ControlTemplate TargetType="Thumb">
+                                        <Border CornerRadius="4" Background="#55FFFFFF" />
+                                    </ControlTemplate>
+                                </Thumb.Template>
+                            </Thumb>
+                        </Track.Thumb>
+                    </Track>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

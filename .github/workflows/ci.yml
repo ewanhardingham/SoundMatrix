@@ -1,0 +1,27 @@
+# Pull requests must build (app + installer script) before merging.
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build
+        run: dotnet build SoundMatrix.csproj -c Release -warnaserror
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          dotnet publish SoundMatrix.csproj -c Release -r win-x64 --self-contained -o publish
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc /DAppVersion=0.0.0 installer\SoundMatrix.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
