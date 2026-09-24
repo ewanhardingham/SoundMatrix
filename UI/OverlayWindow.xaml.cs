@@ -29,6 +29,7 @@ public partial class OverlayWindow : Window
         _app = app;
         InitializeComponent();
         DataContext = this;
+        TestBadge.Visibility = app.IsTestMode ? Visibility.Visible : Visibility.Collapsed;
 
         _refreshTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, (_, _) => RefreshAudio(), Dispatcher);
         _meterTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(40), DispatcherPriority.Render, (_, _) => UpdateMeters(), Dispatcher);

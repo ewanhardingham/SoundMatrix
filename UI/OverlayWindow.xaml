@@ -191,7 +191,13 @@
 
         <DockPanel Margin="48,40">
             <StackPanel DockPanel.Dock="Top" HorizontalAlignment="Center" Margin="0,0,0,16">
-                <TextBlock Text="SoundMatrix" FontSize="30" FontWeight="Light" HorizontalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="SoundMatrix" FontSize="30" FontWeight="Light" />
+                    <Border x:Name="TestBadge" Visibility="Collapsed" CornerRadius="8" Background="#FBBF24" Padding="8,3"
+                            Margin="12,4,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="TEST MODE · FAKE AUDIO" FontSize="11" FontWeight="Bold" Foreground="#0E1015" />
+                    </Border>
+                </StackPanel>
                 <TextBlock x:Name="StatusText" FontSize="14" Opacity="0.75" HorizontalAlignment="Center" Margin="0,4,0,0" />
             </StackPanel>
 

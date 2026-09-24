@@ -26,6 +26,11 @@
     <Using Remove="System.Drawing" />
   </ItemGroup>
 
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Test mode (stubbed audio) is for development only and isn't shipped. -->
+    <Compile Remove="Audio\FakeAudioService.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
   </ItemGroup>

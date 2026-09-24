@@ -40,11 +40,14 @@ cd SoundMatrix
 dotnet run                  # runs in the tray; Ctrl+Alt+S opens the overlay
 dotnet run -- --show        # open the overlay immediately
 dotnet run -- --diagnose    # write %APPDATA%\SoundMatrix\diagnose.txt: where each app is placed, and why
+dotnet run -- --fake-audio  # test mode: stubbed devices and apps (Debug builds only)
 ```
+
+**Test mode** (`--fake-audio`, or the *Test mode (fake audio)* launch profile) swaps the real audio system for five fake devices and fourteen fake apps with live-looking meters. They cover the awkward cases: a crowded device, an empty one, long names, muted and silent apps, and an app that appears and disappears every 8 seconds. Moving, muting and volume changes only affect the fake data, and test mode keeps its own `settings.test.json`, so it's safe to run alongside the installed app. It isn't compiled into Release builds. To add a scenario, edit the lists in `Audio/FakeAudioService.cs`.
 
 | Path | What's there |
 | --- | --- |
-| `Audio/` | WASAPI sessions (via NAudio), plus per-app routing through the undocumented `AudioPolicyConfig` API |
+| `Audio/` | `IAudioService`, with the real WASAPI implementation (sessions via NAudio, per-app routing through the undocumented `AudioPolicyConfig` API) and the fake one for test mode |
 | `UI/` | Overlay window, in-overlay settings panel, glass styles |
 | `Core/`, `Interop/` | Settings (JSON in `%APPDATA%\SoundMatrix`), hotkeys, Win32 calls |
 | `installer/` | Inno Setup script |

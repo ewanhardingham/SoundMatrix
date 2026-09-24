@@ -9,53 +9,10 @@ using NAudio.CoreAudioApi.Interfaces;
 
 namespace SoundMatrix;
 
-public sealed record AudioDevice(string Id, string Name, bool IsDefault);
-
 public sealed record AppSession(string DeviceId, AudioSessionControl Control, bool IsActive);
 
-/// <summary>Every audio session belonging to one executable, across all devices.</summary>
-public sealed class AudioApp
-{
-    public required string Key { get; init; }
-    public required string Name { get; init; }
-    public ImageSource? Icon { get; init; }
-    public List<uint> Pids { get; } = [];
-    public List<AppSession> Sessions { get; } = [];
-    public string DeviceId { get; set; } = "";
-
-    AudioSessionControl Primary => (Sessions.FirstOrDefault(s => s.DeviceId == DeviceId) ?? Sessions[0]).Control;
-
-    public float Volume => Safe(() => Primary.SimpleAudioVolume.Volume);
-    public bool Muted => Safe(() => Primary.SimpleAudioVolume.Mute);
-
-    public float Peak
-    {
-        get
-        {
-            float max = 0;
-            foreach (var s in Sessions)
-                max = Math.Max(max, Safe(() => s.Control.AudioMeterInformation.MasterPeakValue));
-            return max;
-        }
-    }
-
-    static T Safe<T>(Func<T> f) { try { return f(); } catch { return default!; } }
-}
-
-public sealed class AudioSnapshot : IDisposable
-{
-    public List<AudioDevice> Devices { get; } = [];
-    public List<AudioApp> Apps { get; } = [];
-    internal List<IDisposable> Owned { get; } = [];
-
-    public void Dispose()
-    {
-        foreach (var d in Owned) { try { d.Dispose(); } catch { } }
-        Owned.Clear();
-    }
-}
-
-public sealed class AudioService
+/// <summary>The real audio system: WASAPI sessions plus per-app routing via AudioPolicyConfig.</summary>
+public sealed class WasapiAudioService : IAudioService
 {
     readonly MMDeviceEnumerator _enumerator = new();
     readonly Dictionary<string, (string? DeviceId, DateTime Until)> _recentMoves = [];
@@ -71,9 +28,6 @@ public sealed class AudioService
         return next;
     }
 
-    public List<AudioDevice> ListDevices() => Current.Devices.ToList();
-
-    /// <summary>Human-readable dump of where every app is and why — for troubleshooting placement.</summary>
     public string Describe()
     {
         var snap = Refresh();
@@ -164,7 +118,10 @@ public sealed class AudioService
 
         var deviceIds = snap.Devices.Select(d => d.Id).ToHashSet();
         foreach (var app in apps.Values)
+        {
             app.DeviceId = Place(app, deviceIds, defaultId);
+            ReadLevels(app);
+        }
 
         snap.Apps.AddRange(apps.Values.OrderBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase));
         return snap;
@@ -203,6 +160,18 @@ public sealed class AudioService
         if (defaultId is not null && app.Sessions.Any(s => s.DeviceId == defaultId)) return defaultId;
         return app.Sessions[0].DeviceId;
     }
+
+    /// <summary>Volume and mute come from the session on the app's device; the meter is the loudest session.</summary>
+    static void ReadLevels(AudioApp app)
+    {
+        var primary = (app.Sessions.FirstOrDefault(s => s.DeviceId == app.DeviceId) ?? app.Sessions[0]).Control;
+        app.Volume = Safe(() => primary.SimpleAudioVolume.Volume);
+        app.Muted = Safe(() => primary.SimpleAudioVolume.Mute);
+        var sessions = app.Sessions.Select(s => s.Control).ToArray();
+        app.ReadPeak = () => sessions.Max(s => Safe(() => s.AudioMeterInformation.MasterPeakValue));
+    }
+
+    static T Safe<T>(Func<T> f) { try { return f(); } catch { return default!; } }
 
     static string SafeName(MMDevice device)
     {
