@@ -24,6 +24,29 @@ public partial class OverlayWindow : Window
 
     AppSettings Settings => _app.Settings;
 
+    // ---- test hooks (used by the end-to-end tests) --------------------------
+
+    /// <summary>Clicking elsewhere closes the overlay; the tests turn this off so focus changes on CI can't interfere.</summary>
+    internal bool HideOnDeactivate { get; set; } = true;
+    internal AppVM? FocusedApp => _focused;
+    internal AppVM? HeldApp => _held;
+    internal bool IsSettingsOpen => SettingsOpen;
+    internal SettingsPanel? CurrentSettingsPanel => _settingsPanel;
+    internal string StatusMessage => StatusText.Text;
+
+    internal void ResetForTests()
+    {
+        CloseSettings();
+        CancelHold();
+        SetFocus(null);
+        foreach (var d in Devices) d.Apps.Clear();
+        Devices.Clear();
+        _deviceVMs.Clear();
+        _appVMs.Clear();
+        if (IsVisible) { RefreshAudio(); SetStatus(null); }
+        else ShowOverlay();
+    }
+
     public OverlayWindow(App app)
     {
         _app = app;
@@ -38,7 +61,7 @@ public partial class OverlayWindow : Window
 
         PreviewKeyDown += OnPreviewKeyDown;
         Activated += (_, _) => Trace.Log("Overlay activated");
-        Deactivated += (_, _) => { Trace.Log("Overlay deactivated"); HideOverlay(); };
+        Deactivated += (_, _) => { Trace.Log("Overlay deactivated"); if (HideOnDeactivate) HideOverlay(); };
         SizeChanged += (_, _) => DeviceList.MaxWidth = Math.Max(560, ActualWidth - 96);
     }
 
@@ -210,7 +233,7 @@ public partial class OverlayWindow : Window
         if (SettingsOpen) return; // the settings panel handles its own keys (Tab, Space, capture, Esc)
 
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
-        var mods = Keyboard.Modifiers;
+        var mods = e.KeyboardDevice.Modifiers; // same as Keyboard.Modifiers for real input; lets tests simulate Ctrl etc.
         bool Is(HotkeyAction action) => Settings.Get(action).Matches(key, mods);
 
         e.Handled = true;

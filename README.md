@@ -51,12 +51,23 @@ dotnet run -- --fake-audio  # test mode: stubbed devices and apps (Debug builds 
 | `UI/` | Overlay window, in-overlay settings panel, glass styles |
 | `Core/`, `Interop/` | Settings (JSON in `%APPDATA%\SoundMatrix`), hotkeys, Win32 calls |
 | `installer/` | Inno Setup script |
+| `tests/` | End-to-end tests (xUnit) |
+
+### Tests
+
+```powershell
+dotnet test tests/SoundMatrix.Tests
+```
+
+The end-to-end tests start the real app in test mode and drive the overlay with its hotkeys: navigation, jumping to a device, picking up and moving an app, mute, volume, opening settings, rebinding a key, and the global hotkey. After each step they check both what's on screen and the resulting audio state. Key presses go through the same WPF handlers a physical keypress reaches, so they don't need focus and can't be disturbed by other windows. Add a test to `tests/SoundMatrix.Tests/OverlayHotkeyTests.cs` when you change a hotkey or add behaviour. If your installed copy is running and holds `Ctrl+Alt+S`, the global-hotkey test will fail locally, so quit it before running the tests.
+
+### Pull requests
 
 1. Fork the repo and create a branch.
-2. Make your change and check it with `dotnet run`.
-3. Open a pull request against `main`. CI builds the app and the installer.
+2. Make your change, check it with `dotnet run`, and run the tests.
+3. Open a pull request against `main`. CI builds the app, runs the end-to-end tests and builds the installer, and it must pass before merging.
 
-Every merge to `main` publishes a new release with an installer automatically, so keep `main` releasable. Changes that only touch docs don't trigger a release.
+Every merge to `main` runs the tests again and, if they pass, publishes a new release with an installer, so keep `main` releasable. Changes that only touch docs don't trigger a release.
 
 ## License
 

@@ -1,4 +1,5 @@
-# Every push to main builds a self-contained installer and publishes it as a GitHub release.
+# Every push to main runs the end-to-end tests, then builds a self-contained installer and
+# publishes it as a GitHub release.
 # Versions are 0.1.<run number>, so each release is newer than the last.
 name: Release
 
@@ -27,6 +28,10 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
+
+      # A release is only published if the end-to-end tests pass.
+      - name: End-to-end tests
+        run: dotnet test tests/SoundMatrix.Tests --logger "console;verbosity=normal"
 
       - name: Pick version
         id: version

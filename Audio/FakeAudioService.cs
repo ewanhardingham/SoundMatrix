@@ -63,7 +63,21 @@ public sealed class FakeAudioService : IAudioService
 
     readonly Stopwatch _clock = Stopwatch.StartNew();
     readonly Random _noise = new(42);
+    readonly bool _blink;
     AudioSnapshot? _current;
+
+    /// <param name="blink">Let "Notification Sounds" come and go. Tests turn this off to stay deterministic.</param>
+    public FakeAudioService(bool blink = true) => _blink = blink;
+
+    /// <summary>Test hook: the fake's own state for an app, i.e. what "Windows" would now report.</summary>
+    internal (string DeviceId, float Volume, bool Muted) Inspect(string appName)
+    {
+        var app = _apps.Single(a => a.Name == appName);
+        return (app.DeviceId, app.Volume, app.Muted);
+    }
+
+    /// <summary>Device id for the device shown as number <paramref name="number"/> (1-based) with default settings.</summary>
+    internal static string DeviceIdForNumber(int number) => DeviceIdFor(number - 1);
 
     public AudioSnapshot Current => _current ?? Refresh();
 
@@ -105,7 +119,7 @@ public sealed class FakeAudioService : IAudioService
 
     FakeApp? Find(AudioApp app) => _apps.FirstOrDefault(a => a.Key == app.Key);
 
-    bool IsPresent(FakeApp app) => !app.Blinks || (int)(_clock.Elapsed.TotalSeconds / 8) % 2 == 0;
+    bool IsPresent(FakeApp app) => !_blink || !app.Blinks || (int)(_clock.Elapsed.TotalSeconds / 8) % 2 == 0;
 
     /// <summary>A wobbling level so the meters look alive: silent and muted apps stay at zero.</summary>
     float Peak(FakeApp app)

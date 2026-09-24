@@ -16,6 +16,8 @@
     <!-- CI overrides this with -p:Version=… for each release. -->
     <Version>0.0.0</Version>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- The test project lives inside this folder; don't compile it into the app. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests/**</DefaultItemExcludes>
     <!-- DPI awareness lives in app.manifest (WPF); the WinForms-only advice doesn't apply. -->
     <NoWarn>$(NoWarn);WFO0003</NoWarn>
   </PropertyGroup>
@@ -29,6 +31,10 @@
   <ItemGroup Condition="'$(Configuration)' == 'Release'">
     <!-- Test mode (stubbed audio) is for development only and isn't shipped. -->
     <Compile Remove="Audio\FakeAudioService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SoundMatrix.Tests" />
   </ItemGroup>
 
   <ItemGroup>

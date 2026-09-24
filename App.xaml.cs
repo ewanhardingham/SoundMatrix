@@ -17,14 +17,28 @@ public partial class App : Application
     /// <summary>Development test mode: stubbed audio, separate settings, can run beside the real app.</summary>
     public bool IsTestMode { get; private set; }
 
+    internal OverlayWindow Overlay => _overlay;
+    internal GlobalHotkeys Hotkeys => _hotkeys;
+
+    /// <summary>
+    /// Set by the end-to-end tests before the app starts: their fake audio and a profile name, giving them
+    /// isolated settings and a single-instance lock that won't clash with a running copy.
+    /// </summary>
+    internal static (IAudioService Audio, string Profile)? TestStartup { get; set; }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        if (TestStartup is { } test) Start(e.Args, test.Audio, test.Profile);
+        else Start(e.Args);
+    }
 
+    void Start(string[] args, IAudioService? audio = null, string testProfile = "test")
+    {
 #if DEBUG
-        IsTestMode = e.Args.Contains("--fake-audio");
+        IsTestMode = audio is not null || args.Contains("--fake-audio");
 #endif
-        var instance = IsTestMode ? "SoundMatrix.Test" : "SoundMatrix";
+        var instance = IsTestMode ? $"SoundMatrix.{testProfile}" : "SoundMatrix";
         var showEventName = instance + ".ShowOverlay";
 
         _mutex = new Mutex(true, instance + ".SingleInstance", out var isFirst);
@@ -44,15 +58,15 @@ public partial class App : Application
             _tray?.Notify("SoundMatrix hit an error", ex.Exception.Message);
         };
 
-        if (IsTestMode) AppSettings.Profile = "settings.test"; // keep fake devices out of the real settings
+        if (IsTestMode) AppSettings.Profile = $"settings.{testProfile}"; // keep fake devices out of the real settings
         Settings = AppSettings.Load();
 #if DEBUG
-        Audio = IsTestMode ? new FakeAudioService() : new WasapiAudioService();
+        Audio = audio ?? (IsTestMode ? new FakeAudioService() : new WasapiAudioService());
 #else
         Audio = new WasapiAudioService();
 #endif
 
-        if (e.Args.Contains("--diagnose"))
+        if (args.Contains("--diagnose"))
         {
             var path = Path.Combine(Path.GetDirectoryName(AppSettings.LogPath)!, "diagnose.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -76,8 +90,16 @@ public partial class App : Application
         else if (registered)
             _tray.Notify("SoundMatrix is running", $"Press {hotkey.Display} to open the matrix.");
 
-        if (e.Args.Contains("--show") || IsTestMode) _overlay.ShowOverlay();
-        if (e.Args.Contains("--settings")) OpenSettings();
+        if (args.Contains("--show") || IsTestMode) _overlay.ShowOverlay();
+        if (args.Contains("--settings")) OpenSettings();
+    }
+
+    /// <summary>Test hook: fresh audio + default settings, overlay back to a clean matrix view.</summary>
+    internal void ResetForTests(IAudioService audio)
+    {
+        Audio = audio;
+        ApplySettings(new AppSettings());
+        _overlay.ResetForTests();
     }
 
     bool RegisterHotkeys()
@@ -117,7 +139,7 @@ public partial class App : Application
         _overlay.OpenSettings();
     }
 
-    void ExitApp()
+    internal void ExitApp()
     {
         _tray.Dispose();
         _hotkeys.Dispose();
